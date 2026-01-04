@@ -7,11 +7,59 @@ LICENSE: PROPRIETARY / COPYRIGHT PROTECTED
 STATUS: MASTER NODE (ROOT) - GLOBAL STABLE BUILD
 ==============================================================================
 """
-
+async def execute(smiles, language):
+    loop = asyncio.get_running_loop()
+    block, report = await loop.run_in_executor(None, functools.partial(run_architect_core, smiles, language))
+    if block is None: return None, report
+    
+    # Unique ID for the viewer instance
+    unique_id = f"mol_view_{uuid.uuid4().hex[:8]}"
+    
+    # Enhanced 3D visualization settings
+    view = py3Dmol.view(width="100%", height="500px")
+    view.addModel(block, 'mol')
+    view.setStyle({'stick': {'radius': 0.2, 'colorscheme': 'cyanCarbon'}, 
+                   'sphere': {'scale': 0.3}})
+    view.setBackgroundColor('#000000')
+    view.zoomTo()
+    view.spin(True)
+    
+    # Extracting the HTML/JS component specifically
+    mol_html = view._make_html()
+    
+    # Wrapping in a stable container for Gradio gr.HTML
+    final_viz = f"""
+    <div id="{unique_id}" style="width: 100%; height: 500px; position: relative; border: 1px solid #333;">
+        {mol_html}
+    </div>
+    """
+    
+    return final_viz, report
 import os
 import subprocess
 import sys
-
+async def execute(smiles, language):
+    loop = asyncio.get_running_loop()
+    block, report = await loop.run_in_executor(None, functools.partial(run_architect_core, smiles, language))
+    if block is None: return None, report
+    
+    # 3Dmol.js kütüphanesini dışarıdan çağıran script
+    js_library = '<script src="https://3Dmol.org/build/3Dmol-min.js"></script>'
+    
+    # Viewer ayarları
+    view = py3Dmol.view(width="100%", height="500px")
+    view.addModel(block, 'mol')
+    view.setStyle({'stick': {'radius': 0.2, 'colorscheme': 'cyanCarbon'}, 
+                   'sphere': {'scale': 0.3}})
+    view.setBackgroundColor('#000000')
+    view.zoomTo()
+    view.spin(True)
+    
+    # HTML çıktısını al ve JS kütüphanesiyle birleştir
+    mol_html = view._make_html()
+    final_viz = f"{js_library}\n{mol_html}"
+    
+    return final_viz, report
 # --- [CRITICAL PROTOCOL: LIBRARY ENFORCEMENT] ---
 def install_requirements():
     """
@@ -291,7 +339,40 @@ def update_ui(choice):
         gr.update(label=L['input']),
         gr.update(value=L['btn'])
     )
-
+async def execute(smiles, language):
+    loop = asyncio.get_running_loop()
+    block, report = await loop.run_in_executor(None, functools.partial(run_architect_core, smiles, language))
+    if block is None: return None, report
+    
+    # 3Dmol.js motorunu içeren izole bir HTML dökümanı oluşturuyoruz
+    html_content = f"""
+    <html>
+        <head>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+        </head>
+        <body style="background-color: black; margin: 0; overflow: hidden;">
+            <div id="container" style="width: 100vw; height: 100vh;"></div>
+            <script>
+                var viewer = $3Dmol.createViewer("container", {{backgroundColor: "black"}});
+                viewer.addModel(`{block}`, "mol");
+                viewer.setStyle({{stick: {{radius: 0.2, colorscheme: "cyanCarbon"}}, sphere: {{scale: 0.3}}}});
+                viewer.zoomTo();
+                viewer.spin(true);
+                viewer.render();
+            </script>
+        </body>
+    </html>
+    """
+    
+    # HTML içeriğini güvenli bir data URI'ye çeviriyoruz
+    import base64
+    encoded_html = base64.b64encode(html_content.encode()).decode()
+    iframe_src = f"data:text/html;base64,{encoded_html}"
+    
+    # Gradio'ya iframe olarak gönderiyoruz
+    final_viz = f'<iframe src="{iframe_src}" style="width:100%; height:500px; border:2px solid #333; border-radius:10px;"></iframe>'
+    
+    return final_viz, report
 # --- 5. INTERFACE ---
 css = """
 body {background-color: #000; color: #fff; font-family: 'Courier New', monospace;}
@@ -327,4 +408,5 @@ with gr.Blocks(css=css, title="OROBOTIC: HASAN AYHAN ÖZCAN") as demo:
     gr.HTML(f"<div style='text-align:center; color:#333; padding:20px;'>COPYRIGHT © 2026 HASAN AYHAN ÖZCAN.</div>")
 
 if __name__ == "__main__":
-    demo.queue().launch()
+    # "share=True" yaparak global ağda (OROBOTIC network) test edebilirsiniz
+    demo.queue().launch(debug=True, show_error=True)
