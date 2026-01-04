@@ -1,4 +1,4 @@
-C1=CC=C(C=C1)C=O"""
+"""
 ==============================================================================
 PROJECT: OROBOTIC (ARMORED CORE)
 OWNER: HASAN AYHAN ÖZCAN
