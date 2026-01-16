@@ -4,7 +4,6 @@ PROJECT: OROBOTIC (THE ARCHITECT EDITION)
 OWNER & FOUNDER: HASAN AYHAN ÖZCAN
 DATE: 2026-01-04
 LICENSE: PROPRIETARY / COPYRIGHT PROTECTED
-STATUS: MASTER NODE (ROOT) - GLOBAL STABLE BUILD
 ==============================================================================
 """
 async def execute(smiles, language):
